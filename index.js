@@ -1,4 +1,4 @@
-// Keep-alive server for Render / Better Uptime
+// === Keep-alive Express server for Render and Better Uptime ===
 const express = require("express");
 const app = express();
 
@@ -11,7 +11,16 @@ app.listen(PORT, () => {
   console.log(`✅ Keep-alive server running on port ${PORT}`);
 });
 
-// Discord + OpenAI bot
+// === Crash safety + Debugging ===
+if (process.listenerCount("unhandledRejection") === 0) {
+  process.on("unhandledRejection", (err) => {
+    console.error("Unhandled promise rejection:", err);
+  });
+}
+
+console.log("🚀 Bot is starting... PID:", process.pid);
+
+// === Discord Bot + OpenAI ===
 require("dotenv").config();
 
 const { Client, GatewayIntentBits } = require("discord.js");
@@ -19,8 +28,10 @@ const { OpenAI } = require("openai");
 const fs = require("fs");
 const path = require("path");
 
+// OpenAI init
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Discord client init
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -29,6 +40,7 @@ const client = new Client({
   ],
 });
 
+// Config from .env
 const SERVER_IDS = {
   server1: process.env.SERVER1_ID,
   server2: process.env.SERVER2_ID,
@@ -37,8 +49,8 @@ const SERVER_IDS = {
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
 const ALLOWED_CATEGORY_ID = process.env.ALLOWED_CATEGORY_ID;
 
+// Stats file
 const statsFile = path.join(__dirname, "stats.json");
-
 let stats = fs.existsSync(statsFile)
   ? JSON.parse(fs.readFileSync(statsFile))
   : {};
@@ -47,10 +59,12 @@ function saveStats() {
   fs.writeFileSync(statsFile, JSON.stringify(stats, null, 2));
 }
 
+// On bot ready
 client.once("ready", () => {
   console.log(`🧠 Bot instance ready as ${client.user.tag}`);
 });
 
+// Message handler
 client.on("messageCreate", async (message) => {
   if (message.author.bot || !message.guild) return;
 
@@ -63,7 +77,7 @@ client.on("messageCreate", async (message) => {
 
   const content = message.content.trim();
 
-  // Handle commands
+  // Commands
   if (content.startsWith("!")) {
     if (content.startsWith("!stats")) {
       const [, targetName] = content.split(" ");
@@ -123,5 +137,7 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
-
+// === Login (with protection) ===
+if (!client.isReady()) {
+  client.login(process.env.DISCORD_TOKEN);
+}
