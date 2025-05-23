@@ -1,5 +1,4 @@
 require("dotenv").config();
-require("./keepAlive.js"); // Express server for UptimeRobot
 
 const { Client, GatewayIntentBits } = require("discord.js");
 const { OpenAI } = require("openai");
